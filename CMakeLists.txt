@@ -8,7 +8,12 @@ if(WIN32)
   link_directories("C:/Program Files/Latino/lib")
 endif()
 
-add_library(latino-mongo SHARED src/latino-mongo.c)
+add_library(latino-mongo SHARED
+  src/latino-mongo.c
+  src/latmongo-state.c
+  src/latmongo-convert.c
+  src/latmongo-ops.c
+)
 set_target_properties(latino-mongo PROPERTIES PREFIX "")
 
 target_link_libraries(latino-mongo PRIVATE

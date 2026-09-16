@@ -18,9 +18,9 @@ flowchart LR
 | ```mongo.conectar(uri, db)``` | ✅ Funcionando |
 | ```mongo.desconectar()``` | ✅ Funcionando |
 | ```mongo.insertar(col, doc)``` | ✅ Funcionando |
-| ```mongo.buscar(col, filtro)``` | 🚧 En desarrollo |
-| ```mongo.actualizar(col, filtro, doc)``` | 🚧 En desarrollo |
-| ```mongo.eliminar(col, filtro)``` | 🚧 En desarrollo |
+| ```mongo.buscar(col, filtro)``` | ✅ Funcionando |
+| ```mongo.actualizar(col, filtro, doc)``` | ✅ Funcionando |
+| ```mongo.eliminar(col, filtro)``` | ✅ Funcionando |
 
 > Actualmente solo soporta **Windows** (MSYS2 UCRT64). El soporte para Linux
 > está pendiente.
@@ -57,7 +57,7 @@ El paquete ```mongo-c-driver``` instala las librerías dinámicas que usaremos:
 Desde la misma terminal UCRT64, dentro de la carpeta del proyecto:
 
 ```bash
-git clone https://github.com/TU-USUARIO/latino-mongo.git
+git clone https://github.com/angyxys/latino-mongo.git
 cd latino-mongo
 
 cmake -G Ninja -B build
@@ -127,20 +127,46 @@ docker run -d --name mongo -p 27017:27017 mongo
 Crea un archivo ```test_mongo.lat``` en cualquier carpeta:
 
 ```latino
-// incluye la librería nativa
 incluir("mongo")
 
-// conecta al servidor local y a la base de datos "tienda"
-si (mongo.conectar("mongodb://localhost:27017", "tienda"))
-    escribir("✓ Conectado a MongoDB")
-    mongo.insertar("users", "{\"user\": \"prueba\"}")
-    escribir("✓ Se agrego un usuario de prueba")
-sino
-    escribir("✗ No se pudo conectar")
-fin
+d = {"a": 1}
+escribir(d.a)
+escribir(d["a"])
 
-// cierra la conexión
+// [1] conectar
+mongo.conectar("mongodb://localhost:27017", "tienda")
+escribir("[1] conectar: OK")
+
+// [2] ping
+mongo.ping()
+escribir("[2] ping: OK")
+
+// [3] insertar — un documento como diccionario
+mongo.insertar("users", {"user": "test", "edad": 30})
+escribir("[3] insertar: OK")
+
+// [4] insertar_varios — una lista de diccionarios
+mongo.insertar_varios("users", [
+  {"user": "ana", "edad": 25},
+  {"user": "luis", "edad": 40}
+])
+escribir("[4] insertar_varios: OK")
+
+// [5] buscar_uno — filtro diccionario, devuelve un diccionario
+u = mongo.buscar_uno("users", {"user": "test"})
+escribir("[5] buscar_uno:")
+escribir(u.user)   // -> test
+escribir(u.edad)   // -> 30
+
+// [6] buscar — devuelve una lista de diccionarios
+todos = mongo.buscar("users", {})
+primero = todos[0]
+escribir("[6] buscar: primer resultado:")
+escribir(primero.user)
+
+// [7] desconectar
 mongo.desconectar()
+escribir("[7] desconectar: OK")
 ```
 
 Ejecútalo:

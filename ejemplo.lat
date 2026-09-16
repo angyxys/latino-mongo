@@ -1,7 +1,40 @@
 incluir("mongo")
 
+d = {"a": 1}
+escribir(d.a)
+escribir(d["a"])
+
+// [1] conectar
 mongo.conectar("mongodb://localhost:27017", "tienda")
+escribir("[1] conectar: OK")
 
-mongo.insertar("users", "{\"user\": \"prueba\"}")
+// [2] ping
+mongo.ping()
+escribir("[2] ping: OK")
 
+// [3] insertar — un documento como diccionario
+mongo.insertar("users", {"user": "test", "edad": 30})
+escribir("[3] insertar: OK")
+
+// [4] insertar_varios — una lista de diccionarios
+mongo.insertar_varios("users", [
+  {"user": "ana", "edad": 25},
+  {"user": "luis", "edad": 40}
+])
+escribir("[4] insertar_varios: OK")
+
+// [5] buscar_uno — filtro diccionario, devuelve un diccionario
+u = mongo.buscar_uno("users", {"user": "test"})
+escribir("[5] buscar_uno:")
+escribir(u.user)   // -> test
+escribir(u.edad)   // -> 30
+
+// [6] buscar — devuelve una lista de diccionarios
+todos = mongo.buscar("users", {})
+primero = todos[0]
+escribir("[6] buscar: primer resultado:")
+escribir(primero.user)
+
+// [7] desconectar
 mongo.desconectar()
+escribir("[7] desconectar: OK")
