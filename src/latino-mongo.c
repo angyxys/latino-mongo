@@ -58,7 +58,7 @@ static void lat_mongo_conectar(lat_mv *mv) {
 
   mongoc_init();
 
-  if (!cliente) {
+  if (cliente) {
     mongoc_client_destroy(cliente);
     cliente = NULL;
   }
@@ -120,9 +120,60 @@ static void lat_mongo_insertar(lat_mv *mv) {
   latC_apilar_int(mv, 1);
 }
 
+static void lat_mongo_insertar_varios(lat_mv *mv) {
+  lat_objeto *o_docs = latC_desapilar(mv);
+  lat_objeto *o_col = latC_desapilar(mv);
+  const char *col = latC_checar_cadena(mv, o_col);
+  const char *json = latC_checar_cadena(mv, o_docs);
+
+  size_t n = strlen(json) + strlen("{\"_docs\":}") + 1;
+  char *wrap = (char *)malloc(n);
+  snprintf(wrap, n, "{\"_docs\":%s}", json);
+
+  bson_t *wrapdoc = json_a_bson(mv, wrap);
+  free(wrap);
+
+  bson_iter_t outer, inner;
+  if (!bson_iter_init_find(&outer, wrapdoc, "_docs") || !BSON_ITER_HOLDS_ARRAY(&outer)) {
+    bson_destroy(wrapdoc);
+    latC_error(mv, "mongo: insertar_varios espera un array JSON de documentos");
+  }
+
+  bson_t *docs[256]; // Limite practico
+  size_t count = 0;
+  bson_iter_recurse(&outer, &inner);
+  while (bson_iter_next(&inner) && count < 256) {
+    if (!BSON_ITER_HOLDS_DOCUMENT(&inner)) {
+      continue;
+    }
+    uint32_t len = 0;
+    const uint8_t *data = NULL;
+    bson_iter_document(&inner, &len, &data);
+    bson_t *doc = bson_new_from_data(data, len);
+    if (doc) {
+      docs[count++] = doc;
+    }
+  }
+
+  mongoc_collection_t *collection = obtener_collecion(mv, col);
+  bson_error_t error;
+  bool ok = mongoc_collection_insert_many(collection, (const bson_t **)docs, count, NULL, NULL, &error);
+
+  for (size_t i = 0; i < count; i++) {
+    bson_destroy(docs[i]);
+  }
+  mongoc_collection_destroy(collection);
+  bson_destroy(wrapdoc);
+  if (!ok) {
+    latC_error(mv, "mongo: error al insertar varios: %s", error.message);
+  }
+  latC_apilar_int(mv, (int)count);
+}
+
 static const lat_CReg lib_mongo[] = {
   {"conectar", lat_mongo_conectar, 2},
   {"insertar", lat_mongo_insertar, 2},
+  {"insertar_varios", lat_mongo_insertar_varios, 2},
   {"desconectar", lat_mongo_desconectar, 0},
   {NULL, NULL, 0}
 };
