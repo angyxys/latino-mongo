@@ -19,8 +19,9 @@ flowchart LR
 | ```mongo.desconectar()``` | ✅ Funcionando |
 | ```mongo.insertar(col, doc)``` | ✅ Funcionando |
 | ```mongo.buscar(col, filtro)``` | ✅ Funcionando |
-| ```mongo.actualizar(col, filtro, doc)``` | ✅ Funcionando |
-| ```mongo.eliminar(col, filtro)``` | ✅ Funcionando |
+| ```mongo.actualizar(col, filtro, doc)``` | 🚧 En desarrollo |
+| ```mongo.eliminar(col, filtro)``` | 🚧 En desarrollo |
+| ```mongo.contar()``` | 🚧 En desarrollo |
 
 > Actualmente solo soporta **Windows** (MSYS2 UCRT64). El soporte para Linux
 > está pendiente.
