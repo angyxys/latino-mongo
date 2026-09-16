@@ -1,0 +1,7 @@
+incluir("mongo")
+
+mongo.conectar("mongodb://localhost:27017", "tienda")
+
+mongo.insertar("users", "{\"user\": \"prueba\"}")
+
+mongo.desconectar()
