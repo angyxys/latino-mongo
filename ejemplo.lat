@@ -1,40 +1,75 @@
 incluir("mongo")
 
-d = {"a": 1}
-escribir(d.a)
-escribir(d["a"])
+escribir("========== CONEXION ==========")
+r = mongo.conectar("mongodb://localhost:27017", "tienda")
+escribir("conectado: "..r)
 
-// [1] conectar
-mongo.conectar("mongodb://localhost:27017", "tienda")
-escribir("[1] conectar: OK")
+escribir("")
+escribir("========== INSERCION ==========")
 
-// [2] ping
-mongo.ping()
-escribir("[2] ping: OK")
+mongo.insertar("productos", {
+  "nombre": "Cafe",
+  "precio": 85.5,
+  "stock": 120,
+  "tags": ["caliente", "importado"],
+  "origen": {"pais": "Colombia", "region": "Huila"}
+})
+escribir("insertado: Cafe")
 
-// [3] insertar — un documento como diccionario
-mongo.insertar("users", {"user": "test", "edad": 30})
-escribir("[3] insertar: OK")
-
-// [4] insertar_varios — una lista de diccionarios
-mongo.insertar_varios("users", [
-  {"user": "ana", "edad": 25},
-  {"user": "luis", "edad": 40}
+n = mongo.insertar_varios("productos", [
+  {"nombre": "Te", "precio": 50, "stock": 80, "tags": ["caliente"], "origen": {"pais": "Argentina"}},
+  {"nombre": "Azucar", "precio": 25, "stock": 200, "tags": [], "origen": {"pais": "Mexico"}}
 ])
-escribir("[4] insertar_varios: OK")
+escribir("insertados en lote: "..n)
 
-// [5] buscar_uno — filtro diccionario, devuelve un diccionario
-u = mongo.buscar_uno("users", {"user": "test"})
-escribir("[5] buscar_uno:")
-escribir(u.user)   // -> test
-escribir(u.edad)   // -> 30
+escribir("")
+escribir("========== BUSQUEDA INDIVIDUAL ==========")
 
-// [6] buscar — devuelve una lista de diccionarios
-todos = mongo.buscar("users", {})
-primero = todos[0]
-escribir("[6] buscar: primer resultado:")
-escribir(primero.user)
+doc = mongo.buscar_uno("productos", {"nombre": "Cafe"})
+escribir("nombre:   "..doc.nombre)
+escribir("precio:   "..acadena(doc.precio))
+escribir("stock:    "..doc.stock)
+escribir("pais:     "..doc.origen.pais)
+escribir("tag[0]:   "..doc.tags[0])
+escribir(doc)
 
-// [7] desconectar
+escribir("")
+escribir("========== BUSQUEDA MULTIPLE ==========")
+
+total = mongo.contar("productos", {})
+escribir("productos en la coleccion: "..total)
+
+todos = mongo.buscar("productos", {})
+i = 0
+mientras i < total
+  p = todos[i]
+  escribir("  - "..p.nombre.." ($"..acadena(p.precio)..")")
+  i = i + 1
+fin
+
+escribir("")
+escribir("========== CONTEOS CON FILTROS ==========")
+escribir("precio > 40:      "..mongo.contar("productos", {"precio": {"$gt": 40}}))
+escribir("origen Colombia:  "..mongo.contar("productos", {"origen.pais": "Colombia"}))
+escribir("con tag caliente: "..mongo.contar("productos", {"tags": "caliente"}))
+
+escribir("")
+escribir("========== ACTUALIZACION ==========")
+antes = mongo.buscar_uno("productos", {"nombre": "Te"})
+escribir("Te stock ANTES:   "..antes.stock)
+
+m = mongo.actualizar("productos", {"nombre": "Te"}, {"$set": {"stock": 75}})
+escribir("modificados:      "..m)
+
+despues = mongo.buscar_uno("productos", {"nombre": "Te"})
+escribir("Te stock DESPUES: "..despues.stock)
+
+escribir("")
+escribir("========== ELIMINACION ==========")
+d = mongo.eliminar("productos", {"nombre": "Azucar"})
+escribir("eliminados: "..d)
+escribir("quedan:     "..mongo.contar("productos", {}))
+
 mongo.desconectar()
-escribir("[7] desconectar: OK")
+escribir("")
+escribir("========== DEMO COMPLETO ==========")

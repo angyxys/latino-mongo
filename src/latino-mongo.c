@@ -8,6 +8,9 @@ static const lat_CReg lib_mongo[] = {
   {"insertar_varios", latmongo_op_insertar_varios, 2},
   {"buscar_uno", latmongo_op_buscar_uno, 2},
   {"buscar", latmongo_op_buscar, 2},
+  {"actualizar", latmongo_op_actualizar, 3},
+  {"eliminar", latmongo_op_eliminar, 2},
+  {"contar", latmongo_op_contar, 2},
   {NULL, NULL, 0},
 };
 

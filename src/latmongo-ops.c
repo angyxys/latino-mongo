@@ -2,6 +2,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+static long reply_contador(const bson_t *reply, const char *key) {
+  bson_iter_t it;
+  if (!bson_iter_init_find(&it, reply, key)) {
+    return 0;
+  }
+  if (BSON_ITER_HOLDS_INT32(&it)) {
+    return (long)bson_iter_int32(&it);
+  }
+  if (BSON_ITER_HOLDS_INT64(&it)) {
+    return (long)bson_iter_int64(&it);
+  }
+  if (BSON_ITER_HOLDS_DOUBLE(&it)) {
+    return (long)bson_iter_double(&it);
+  }
+  return 0;
+}
+
+static void apilar_entero(lat_mv *mv, int v) {
+  latC_apilar(mv, latC_crear_numerico(mv, (double)v));
+}
+
 void latmongo_op_conectar(lat_mv *mv) {
   lat_objeto *o_db = latC_desapilar(mv);
   lat_objeto *o_uri = latC_desapilar(mv);
@@ -63,7 +84,7 @@ void latmongo_op_conectar(lat_mv *mv) {
     latC_error(mv, "mongo: fallo la conexion a '%s': %s", uri, error.message);
   }
 
-  latC_apilar_int(mv, 1);
+  apilar_entero(mv, 1);
 }
 
 void latmongo_op_desconectar(lat_mv *mv) {
@@ -88,7 +109,7 @@ void latmongo_op_ping(lat_mv *mv) {
   if (!ok) {
     latC_error(mv, "mongo: ping fallo: %s", error.message);
   }
-  latC_apilar_int(mv, 1);
+  apilar_entero(mv, 1);
 }
 
 void latmongo_op_insertar(lat_mv *mv) {
@@ -113,7 +134,7 @@ void latmongo_op_insertar(lat_mv *mv) {
   if (!ok) {
     latC_error(mv, "mongo: error al insertar en '%s': %s", col, error.message);
   }
-  latC_apilar_int(mv, 1);
+  apilar_entero(mv, 1);
 }
 
 void latmongo_op_insertar_varios(lat_mv *mv) {
@@ -165,7 +186,7 @@ void latmongo_op_insertar_varios(lat_mv *mv) {
   if (!ok) {
     latC_error(mv, "mongo: error al insertar en '%s': %s", col, error.message);
   }
-  latC_apilar_int(mv, (int)count);
+  apilar_entero(mv, (int)count);
 }
 
 void latmongo_op_buscar_uno(lat_mv *mv) {
@@ -239,4 +260,100 @@ void latmongo_op_buscar(lat_mv *mv) {
   mongoc_cursor_destroy(cursor);
   bson_destroy(&query);
   mongoc_collection_destroy(collection);
+}
+
+void latmongo_op_actualizar(lat_mv* mv) {
+  lat_objeto* o_update = latC_desapilar(mv);
+  lat_objeto* o_filtro = latC_desapilar(mv);
+  lat_objeto* o_col = latC_desapilar(mv);
+  const char* col = latC_checar_cadena(mv, o_col);
+
+  if (!latmongo_es_dict(o_filtro)) {
+    latC_error(mv, "mongo: actualizar espera un diccionario como filtro");
+  }
+  if (!latmongo_es_dict(o_update)) {
+    latC_error(mv,
+               "mongo: actualizar espera un diccionario de cambios con "
+               "operadores, ej: {\"$set\": {\"edad\": 31}}");
+  }
+
+  bson_t query = BSON_INITIALIZER;
+  bson_t update = BSON_INITIALIZER;
+  latmongo_dict_a_bson(mv, o_filtro, &query);
+  latmongo_dict_a_bson(mv, o_update, &update);
+
+  mongoc_collection_t* collection = latmongo_obtener_coleccion(mv, col);
+  bson_t reply;
+  bson_error_t error;
+  bool ok = mongoc_collection_update_one(collection, &query, &update, NULL,
+                                         &reply, &error);
+
+  long modificados = ok ? reply_contador(&reply, "modifiedCount") : 0;
+
+  bson_destroy(&reply);
+  bson_destroy(&update);
+  bson_destroy(&query);
+  mongoc_collection_destroy(collection);
+
+  if (!ok) {
+    latC_error(mv, "mongo: error al actualizar en '%s': %s", col,
+               error.message);
+  }
+  apilar_entero(mv, (int)modificados);
+}
+
+void latmongo_op_eliminar(lat_mv* mv) {
+  lat_objeto* o_filtro = latC_desapilar(mv);
+  lat_objeto* o_col = latC_desapilar(mv);
+  const char* col = latC_checar_cadena(mv, o_col);
+
+  if (!latmongo_es_dict(o_filtro)) {
+    latC_error(mv, "mongo: eliminar espera un diccionario como filtro");
+  }
+
+  bson_t query = BSON_INITIALIZER;
+  latmongo_dict_a_bson(mv, o_filtro, &query);
+
+  mongoc_collection_t* collection = latmongo_obtener_coleccion(mv, col);
+  bson_t reply;
+  bson_error_t error;
+  bool ok =
+      mongoc_collection_delete_one(collection, &query, NULL, &reply, &error);
+
+  long eliminados = ok ? (long)reply_contador(&reply, "deletedCount") : 0;
+
+  bson_destroy(&reply);
+  bson_destroy(&query);
+  mongoc_collection_destroy(collection);
+
+  if (!ok) {
+    latC_error(mv, "mongo: error al eliminar en '%s': %s", col, error.message);
+  }
+  apilar_entero(mv, (int)eliminados);
+}
+
+void latmongo_op_contar(lat_mv* mv) {
+  lat_objeto* o_filtro = latC_desapilar(mv);
+  lat_objeto* o_col = latC_desapilar(mv);
+  const char* col = latC_checar_cadena(mv, o_col);
+
+  if (!latmongo_es_dict(o_filtro)) {
+    latC_error(mv, "mongo: contar espera un diccionario como filtro");
+  }
+
+  bson_t query = BSON_INITIALIZER;
+  latmongo_dict_a_bson(mv, o_filtro, &query);
+
+  mongoc_collection_t* collection = latmongo_obtener_coleccion(mv, col);
+  bson_error_t error;
+  int64_t n = mongoc_collection_count_documents(collection, &query, NULL, NULL,
+                                                NULL, &error);
+
+  bson_destroy(&query);
+  mongoc_collection_destroy(collection);
+
+  if (n < 0) {
+    latC_error(mv, "mongo: error al contar en '%s': %s", col, error.message);
+  }
+  apilar_entero(mv, (int)n);
 }

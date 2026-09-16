@@ -52,5 +52,8 @@ void latmongo_op_insertar(lat_mv* mv);
 void latmongo_op_insertar_varios(lat_mv* mv);
 void latmongo_op_buscar_uno(lat_mv* mv);
 void latmongo_op_buscar(lat_mv* mv);
+void latmongo_op_actualizar(lat_mv *mv);
+void latmongo_op_eliminar(lat_mv *mv);
+void latmongo_op_contar(lat_mv *mv);
 
 #endif
